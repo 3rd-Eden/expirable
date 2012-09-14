@@ -1,0 +1,28 @@
+{
+  "name": "expirable",
+  "version": "0.0.0",
+  "description": "Expirable cache",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "",
+  "keywords": [
+    "cache",
+    "expire",
+    "expires",
+    "expirable",
+    "store",
+    "storage",
+    "cows",
+    "moo",
+    "nodejs",
+    "cached",
+    "cacher",
+    "caching",
+    "expiring",
+    "expiree"
+  ],
+  "author": "Arnout Kazemier",
+  "license": "MIT"
+}
