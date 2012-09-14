@@ -24,5 +24,9 @@
     "expiree"
   ],
   "author": "Arnout Kazemier",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "mocha": "1.4.x",
+    "chai": "1.2.x"
+  }
 }

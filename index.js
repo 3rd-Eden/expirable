@@ -75,7 +75,7 @@ Expire.prototype.set = function set(key, value, expires) {
 Expire.prototype.has = function has(key) {
   var now = Date.now();
 
-  return key in this.cache && (now - this.cache[key].last) >= this.cache[key].expires;
+  return key in this.cache && (now - this.cache[key].last) <= this.cache[key].expires;
 };
 
 /**
