@@ -28,6 +28,16 @@ value = cache.get('key');
 // will expire 5 minutes after you have set it
 value = cache.get('key', true);
 
+// check if a value exists
+cache.has('key') ? 'yes' : 'no';
+
+// remove a key from the cache.
+cache.remove('key');
+
+// update the expiree of a key
+cache.expire('key', '10 seconds');
+cache.expire('kex'); // alias for cache.remove, as it expired directly
+
 // stop the interal setinterval that scan for out of date keys
 cache.stop();
 
