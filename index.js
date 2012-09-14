@@ -5,14 +5,18 @@
  *
  * @constructor
  * @param {Number} expire amount of miliseconds we should cache the data
+ * @param {Object} options options
  * @api public
  */
-function Expire(expire) {
+function Expire(expire, options) {
+  options = options || {};
+
   this.cache = {};
-  this.expire = Expire.parse(expire || '5 minutes');
+  this.expiree = Expire.parse(expire || '5 minutes');
+  this.interval = Expire.parse(options.interval || '2 minutes');
 
   // Start watching for expired items.
-  this.start();
+  if (!options.manually) this.start();
 }
 
 /**
@@ -54,7 +58,7 @@ Expire.prototype.get = function get(key, dontUpdate) {
 Expire.prototype.set = function set(key, value, expires) {
   this.cache[key] = {
       value: value
-    , expires: expires ? Expire.parse(expires) : this.expire
+    , expires: expires ? Expire.parse(expires) : this.expiree
     , last: Date.now()
   };
 
@@ -72,6 +76,22 @@ Expire.prototype.has = function has(key) {
   var now = Date.now();
 
   return key in this.cache && (now - this.cache[key].last) >= this.cache[key].expires;
+};
+
+/**
+ * Expire a key or update it's expiree.
+ *
+ * @param {String} key
+ * @param {Mixed} expire
+ */
+Expire.prototype.expire = function expires(key, expire) {
+  if (!expire) return this.remove(key);
+
+  // we have the key, bump it's expire time.
+  if (this.has(key)) {
+    this.cache[key].expires = Expire.parse(expire);
+    this.cache[key].last = Date.now();
+  }
 };
 
 /**
