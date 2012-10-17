@@ -90,4 +90,24 @@ describe('Expirable', function () {
       done();
     }, 50);
   });
+
+  it('should store the data from a stream as a buffer', function (done) {
+    var cache = new Expirable('10 minutes')
+      , fs = require('fs');
+
+    var stream = cache.stream('foo', fs.createReadStream(__filename));
+
+    expect(stream).to.instanceof(require('stream'));
+    expect(cache.get('foo')).to.equal(undefined);
+
+    stream.on('end', function () {
+      var buff = cache.get('foo');
+
+      expect(Buffer.isBuffer(buff)).to.equal(true);
+      expect(buff.toString()).to.contain('fs.createReadStream(__filename));');
+
+      cache.destroy();
+      done();
+    });
+  });
 });

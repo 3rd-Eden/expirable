@@ -46,4 +46,10 @@ cache.start();
 
 // kill everything, nuke that motherfucker.
 cache.destroy();
+
+// OH so you want to store the output of a Stream? sure!
+var stream = cache.stream('key', fs.createReadStream(..), '10 seconds');
+
+// stream is the result of fs.createReadStream
+// once the stream fires it's `done` event, we will store the data.
 ```

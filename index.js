@@ -33,6 +33,9 @@ Expire.prototype.get = function get(key, dontUpdate) {
 
   var now = Date.now();
 
+  // We are still streaming in data, so return nothing
+  if (result.streaming) return undefined;
+
   // We found a match, make sure that it's not expired.
   if (now - result.last >= result.expires) {
     delete this.cache[key];
@@ -63,6 +66,38 @@ Expire.prototype.set = function set(key, value, expires) {
   };
 
   return value;
+};
+
+/**
+ * Stores the complete output of a stream in memory.
+ *
+ * @param {String} key the key
+ * @param {Stream} stream the stream that we need to read the data off
+ * @param {String} expires option custom expire
+ * @returns {Stream} the stream you passed it
+ */
+Expire.prototype.stream = function streamer(key, stream, expires) {
+  var chunks = []
+    , self = this;
+
+  this.cache[key] = { streaming: true };
+
+  stream.on('data', function data(buffer) {
+    chunks.push(buffer);
+  });
+
+  stream.on('error', function error() {
+    chunks.length = 0;
+  });
+
+  stream.on('end', function end(buffer) {
+    if (buffer) chunks.push(buffer);
+
+    if (chunks.length) self.set(key, Buffer.concat(chunks), expires);
+    chunks.length = 0;
+  });
+
+  return stream;
 };
 
 /**
@@ -117,6 +152,7 @@ Expire.prototype.scan = function scan() {
   for (key in this.cache) {
     result = this.cache[key];
 
+    if (result.streaming) continue;
     if (now - result.last >= result.expires) {
       delete this.cache[key];
     }
