@@ -26,8 +26,10 @@ describe('Expirable', function () {
 
     cache.set('foo', 'bar');
     expect(cache.get('foo')).to.equal('bar');
+    expect(cache.length).to.equal(1);
 
     cache.destroy();
+    expect(cache.length).to.equal(0);
   });
 
   it('should have the key after setting', function () {
@@ -37,16 +39,20 @@ describe('Expirable', function () {
     expect(cache.has('foo')).to.equal(true);
 
     cache.destroy();
+    expect(cache.length).to.equal(0);
   });
 
   it('should expire the cache', function (done) {
     var cache = new Expirable('5ms');
 
+    expect(cache.length).to.equal(0);
     cache.set('foo', 'bar');
+    expect(cache.length).to.equal(1);
 
     setTimeout(function () {
       expect(cache.has('foo')).to.equal(false);
       expect(cache.get('foo')).to.equal(undefined);
+      expect(cache.length).to.equal(0);
 
       cache.destroy();
       done();
@@ -56,10 +62,14 @@ describe('Expirable', function () {
   it('should remove keys', function () {
     var cache = new Expirable('10000 ms');
 
+    expect(cache.length).to.equal(0);
     cache.set('foo', 'bar');
-    cache.remove('foo');
-    expect(cache.get('foo')).to.equal(undefined);
+    expect(cache.length).to.equal(1);
 
+    cache.remove('foo');
+    expect(cache.length).to.equal(0);
+
+    expect(cache.get('foo')).to.equal(undefined);
     cache.destroy();
   });
 
@@ -70,6 +80,7 @@ describe('Expirable', function () {
 
     setTimeout(function () {
       expect(cache.get('foo')).to.equal('bar');
+      expect(cache.length).to.equal(1);
 
       cache.destroy();
       done();
@@ -83,8 +94,11 @@ describe('Expirable', function () {
     cache.stop();
 
     setTimeout(function () {
+      expect(cache.length).to.equal(1);
       expect(cache.cache.foo.value).to.equal('trololol');
+
       expect(cache.get('foo')).to.equal(undefined);
+      expect(cache.length).to.equal(0);
 
       cache.destroy();
       done();

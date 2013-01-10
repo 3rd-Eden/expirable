@@ -3,17 +3,29 @@
 /**
  * Simple automatic expiring cache.
  *
+ * Options:
+ *
+ * - expire {String} how long should the objects stay alive
+ * - interval {String} when should the cleaning operation start.
+ *
  * @constructor
  * @param {Number} expire amount of miliseconds we should cache the data
  * @param {Object} options options
  * @api public
  */
-function Expire(expire, options) {
+function Expire(options) {
+  // Legacy formatting
+  if (typeof options === 'string') {
+    options = { expire: options };
+  }
+
   options = options || {};
 
   this.cache = {};
-  this.expiree = Expire.parse(expire || '5 minutes');
+  this.length = 0;
+  this.expiree = Expire.parse(options.expire || '5 minutes');
   this.interval = Expire.parse(options.interval || '2 minutes');
+  this.lru = options.lru || 0;
 
   // Start watching for expired items.
   if (!options.manually) this.start();
@@ -33,11 +45,12 @@ Expire.prototype.get = function get(key, dontUpdate) {
 
   var now = Date.now();
 
-  // We are still streaming in data, so return nothing
+  // We are still streaming in data, so return nothing.
   if (result.streaming) return undefined;
 
   // We found a match, make sure that it's not expired.
   if (now - result.last >= result.expires) {
+    this.length--;
     delete this.cache[key];
     return undefined;
   }
@@ -59,6 +72,8 @@ Expire.prototype.get = function get(key, dontUpdate) {
  * @api public
  */
 Expire.prototype.set = function set(key, value, expires) {
+  if (!(key in this.cache)) this.length++;
+
   this.cache[key] = {
       value: value
     , expires: expires ? Expire.parse(expires) : this.expiree
@@ -136,6 +151,8 @@ Expire.prototype.expire = function expires(key, expire) {
  * @api public
  */
 Expire.prototype.remove = function remove(key) {
+  if (key in this.cache) this.length--;
+
   delete this.cache[key];
 };
 
@@ -154,6 +171,7 @@ Expire.prototype.scan = function scan() {
 
     if (result.streaming) continue;
     if (now - result.last >= result.expires) {
+      this.length--;
       delete this.cache[key];
     }
   }
@@ -188,6 +206,7 @@ Expire.prototype.start = function start() {
 Expire.prototype.destroy = function destroy() {
   this.stop();
   this.cache = {};
+  this.length = 0;
 };
 
 /**
