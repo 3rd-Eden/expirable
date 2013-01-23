@@ -34,6 +34,13 @@ cache.has('key') ? 'yes' : 'no';
 // remove a key from the cache.
 cache.remove('key');
 
+// chen a key is removed from the cache it will emit an event for it. This is
+// useful when you want to re-cache an item again when it expires.
+cache.on('key::removed', function (expired) {
+  // The expired boolean tells you if the key was removed because it was expired
+  // or if it was a manual removal
+});
+
 // update the expiree of a key
 cache.expire('key', '10 seconds');
 cache.expire('kex'); // alias for cache.remove, as it expired directly

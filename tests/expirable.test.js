@@ -73,6 +73,32 @@ describe('Expirable', function () {
     cache.destroy();
   });
 
+  it('should emit <key>:removed when a key is removed', function (done) {
+    var cache = new Expirable('10000 ms');
+
+    cache.set('foo', 'bar');
+    cache.on('foo:removed', function (expired) {
+      expect(expired).to.equal(false);
+
+      cache.destroy();
+      done();
+    });
+
+    cache.remove('foo');
+  });
+
+  it('should emit <key>:removed when a key is expired', function (done) {
+    var cache = new Expirable('5 ms');
+
+    cache.set('foo', 'bar');
+    cache.on('foo:removed', function (expired) {
+      expect(expired).to.equal(true);
+
+      cache.destroy();
+      done();
+    });
+  });
+
   it('should override default expire time during set', function (done) {
     var cache = new Expirable('5 ms');
 

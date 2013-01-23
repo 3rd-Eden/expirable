@@ -1,5 +1,23 @@
 'use strict';
 
+var EventEmitter = require('events').EventEmitter;
+
+/**
+ * Simple data interface.
+ *
+ * @constructor
+ * @param {Mixed} data
+ * @param {Number} expires
+ * @param {Boolean} streaming
+ * @api private
+ */
+function Data(value, expires, streaming) {
+  this.value = value;
+  this.expires = expires;
+  this.streaming = streaming || false;
+  this.last = Date.now();
+}
+
 /**
  * Simple automatic expiring cache.
  *
@@ -21,15 +39,17 @@ function Expire(options) {
 
   options = options || {};
 
-  this.cache = {};
-  this.length = 0;
+  this.cache = Object.create(null);
   this.expiree = Expire.parse(options.expire || '5 minutes');
   this.interval = Expire.parse(options.interval || '2 minutes');
-  this.lru = options.lru || 0;
+
+  this.length = 0;
 
   // Start watching for expired items.
   if (!options.manually) this.start();
 }
+
+Expire.prototype.__proto__ = EventEmitter.prototype;
 
 /**
  * Get an item from the cache based on the given key.
@@ -50,8 +70,7 @@ Expire.prototype.get = function get(key, dontUpdate) {
 
   // We found a match, make sure that it's not expired.
   if (now - result.last >= result.expires) {
-    this.length--;
-    delete this.cache[key];
+    this.remove(key, true);
     return undefined;
   }
 
@@ -74,11 +93,8 @@ Expire.prototype.get = function get(key, dontUpdate) {
 Expire.prototype.set = function set(key, value, expires) {
   if (!(key in this.cache)) this.length++;
 
-  this.cache[key] = {
-      value: value
-    , expires: expires ? Expire.parse(expires) : this.expiree
-    , last: Date.now()
-  };
+  expires = expires ? Expire.parse(expires) : this.expiree;
+  this.cache[key] = new Data(value, expires);
 
   return value;
 };
@@ -92,23 +108,34 @@ Expire.prototype.set = function set(key, value, expires) {
  * @returns {Stream} the stream you passed it
  */
 Expire.prototype.stream = function streamer(key, stream, expires) {
-  var chunks = []
+  var error = false
+    , chunks = []
     , self = this;
 
-  this.cache[key] = { streaming: true };
+  this.cache[key] = new Data(undefined, undefined, true);
 
   stream.on('data', function data(buffer) {
     chunks.push(buffer);
   });
 
-  stream.on('error', function error() {
+  stream.on('error', function errors() {
     chunks.length = 0;
+    error = true;
   });
 
   stream.on('end', function end(buffer) {
-    if (buffer) chunks.push(buffer);
+    if (!error) {
+      if (buffer) chunks.push(buffer);
 
-    if (chunks.length) self.set(key, Buffer.concat(chunks), expires);
+      if (chunks.length) {
+        self.set(key, Buffer.concat(chunks), expires);
+      } else {
+        self.remove(key);
+      }
+    } else {
+      self.remove(key);
+    }
+
     chunks.length = 0;
   });
 
@@ -123,9 +150,10 @@ Expire.prototype.stream = function streamer(key, stream, expires) {
  * @api public
  */
 Expire.prototype.has = function has(key) {
-  var now = Date.now();
+  var now = Date.now()
+    , item = this.cache[key];
 
-  return key in this.cache && (now - this.cache[key].last) <= this.cache[key].expires;
+  return !!item && !item.streaming && (now - item.last) <= item.expires;
 };
 
 /**
@@ -142,18 +170,26 @@ Expire.prototype.expire = function expires(key, expire) {
     this.cache[key].expires = Expire.parse(expire);
     this.cache[key].last = Date.now();
   }
+
+  return this;
 };
 
 /**
  * Remove an item from the cache.
  *
  * @param {String} key
+ * @param {Boolean} expired was the reason of removal because it was expired
  * @api public
  */
-Expire.prototype.remove = function remove(key) {
-  if (key in this.cache) this.length--;
+Expire.prototype.remove = function remove(key, expired) {
+  if (key in this.cache) {
+    this.length--;
 
-  delete this.cache[key];
+    this.emit(key + ':removed', !!expired);
+    delete this.cache[key];
+  }
+
+  return this;
 };
 
 /**
@@ -171,10 +207,11 @@ Expire.prototype.scan = function scan() {
 
     if (result.streaming) continue;
     if (now - result.last >= result.expires) {
-      this.length--;
-      delete this.cache[key];
+      this.remove(key, true);
     }
   }
+
+  return this;
 };
 
 /**
@@ -184,6 +221,8 @@ Expire.prototype.scan = function scan() {
  */
 Expire.prototype.stop = function stop() {
   if (this.timer) clearInterval(this.timer);
+
+  return this;
 };
 
 /**
@@ -192,10 +231,11 @@ Expire.prototype.stop = function stop() {
  * @api public
  */
 Expire.prototype.start = function start() {
-  // Top old timers before starting a new one
+  // Stop old timers before starting a new one
   this.stop();
 
   this.timer = setInterval(this.scan.bind(this), this.expire);
+  return this;
 };
 
 /**
@@ -205,8 +245,10 @@ Expire.prototype.start = function start() {
  */
 Expire.prototype.destroy = function destroy() {
   this.stop();
-  this.cache = {};
+  this.cache = Object.create(null);
   this.length = 0;
+
+  return this;
 };
 
 /**
