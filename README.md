@@ -59,4 +59,13 @@ var stream = cache.stream('key', fs.createReadStream(..), '10 seconds');
 
 // stream is the result of fs.createReadStream
 // once the stream fires it's `done` event, we will store the data.
+
+// iterate over the cache
+cache.forEach(function (key, value) {
+  console.log(key, value);
+});
 ```
+
+## License
+
+MIT

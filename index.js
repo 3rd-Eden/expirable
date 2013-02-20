@@ -193,6 +193,30 @@ Expire.prototype.remove = function remove(key, expired) {
 };
 
 /**
+ * Iterate over all the keys in our cache.
+ *
+ * @param {Function} iterator
+ * @param {String} context
+ * @api public
+ */
+Expire.prototype.forEach = function forEach(iterator, context) {
+  var now = Date.now();
+
+  Object.keys(this.cache).forEach(function iterating(key) {
+    var data = this.cache[key];
+
+    // Make sure that it's not expired.
+    if (now - data.last >= data.expires) {
+      return this.remove(key, true);
+    }
+
+    iterator.call(context || this, key, data.value, data.expires);
+  }, this);
+
+  return this;
+};
+
+/**
  * Scans the cache for potential items that should expire.
  *
  * @api private

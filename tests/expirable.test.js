@@ -150,4 +150,17 @@ describe('Expirable', function () {
       done();
     });
   });
+
+  it('should be able to iterate over the cache', function () {
+    var cache = new Expirable('10 hours');
+
+    cache.set('foo', 'bar');
+    cache.forEach(function (key, value) {
+      expect(this).to.equal(cache);
+      expect(key).to.equal('foo');
+      expect(value).to.equal('bar');
+    });
+
+    cache.destroy();
+  });
 });
