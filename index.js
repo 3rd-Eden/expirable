@@ -23,12 +23,12 @@ function Data(value, expires, streaming) {
  *
  * Options:
  *
- * - expire {String} how long should the objects stay alive
+ * - expire {String} how long should the objects stay alive.
  * - interval {String} when should the cleaning operation start.
  *
  * @constructor
- * @param {Number} expire amount of miliseconds we should cache the data
- * @param {Object} options options
+ * @param {Number} expire amount of milliseconds we should cache the data.
+ * @param {Object} options options.
  * @api public
  */
 function Expire(options) {
@@ -40,6 +40,7 @@ function Expire(options) {
   options = options || {};
 
   this.cache = Object.create(null);
+  this.prefix = options.prefix || '@'+ Date.now();
   this.expiree = Expire.parse(options.expire || '5 minutes');
   this.interval = Expire.parse(options.interval || '2 minutes');
 
@@ -55,12 +56,12 @@ Expire.prototype.__proto__ = EventEmitter.prototype;
  * Get an item from the cache based on the given key.
  *
  * @param {String} key
- * @param {Boolean} dontUpdate don't update the expiree value
+ * @param {Boolean} dontUpdate don't update the expire value
  * @returns {Mixed} undefined if there isn't a match, otherwise the result
  * @api public
  */
 Expire.prototype.get = function get(key, dontUpdate) {
-  var result = this.cache[key];
+  var result = this.cache[this.prefix + key];
   if (!result) return undefined;
 
   var now = Date.now();
@@ -91,6 +92,8 @@ Expire.prototype.get = function get(key, dontUpdate) {
  * @api public
  */
 Expire.prototype.set = function set(key, value, expires) {
+  key = this.prefix + key;
+
   if (!(key in this.cache)) this.length++;
 
   expires = expires ? Expire.parse(expires) : this.expiree;
@@ -112,7 +115,7 @@ Expire.prototype.stream = function streamer(key, stream, expires) {
     , chunks = []
     , self = this;
 
-  this.cache[key] = new Data(undefined, undefined, true);
+  this.cache[this.prefix + key] = new Data(undefined, undefined, true);
 
   stream.on('data', function data(buffer) {
     chunks.push(buffer);
@@ -150,8 +153,8 @@ Expire.prototype.stream = function streamer(key, stream, expires) {
  * @api public
  */
 Expire.prototype.has = function has(key) {
-  var now = Date.now()
-    , item = this.cache[key];
+  var item = this.cache[this.prefix + key]
+    , now = Date.now();
 
   return !!item && !item.streaming && (now - item.last) <= item.expires;
 };
@@ -167,6 +170,7 @@ Expire.prototype.expire = function expires(key, expire) {
 
   // we have the key, bump it's expire time.
   if (this.has(key)) {
+    key = this.prefix + key;
     this.cache[key].expires = Expire.parse(expire);
     this.cache[key].last = Date.now();
   }
@@ -182,11 +186,13 @@ Expire.prototype.expire = function expires(key, expire) {
  * @api public
  */
 Expire.prototype.remove = function remove(key, expired) {
-  if (key in this.cache) {
+  var prefixed = this.prefix + key;
+
+  if (prefixed in this.cache) {
     this.length--;
 
     this.emit(key + ':removed', !!expired);
-    delete this.cache[key];
+    delete this.cache[prefixed];
   }
 
   return this;
@@ -203,14 +209,15 @@ Expire.prototype.forEach = function forEach(iterator, context) {
   var now = Date.now();
 
   Object.keys(this.cache).forEach(function iterating(key) {
-    var data = this.cache[key];
+    var clean = key.slice(this.prefix.length)
+      , data = this.cache[key];
 
     // Make sure that it's not expired.
     if (now - data.last >= data.expires) {
-      return this.remove(key, true);
+      return this.remove(clean, true);
     }
 
-    iterator.call(context || this, key, data.value, data.expires);
+    iterator.call(context || this, clean, data.value, data.expires);
   }, this);
 
   return this;
@@ -224,14 +231,16 @@ Expire.prototype.forEach = function forEach(iterator, context) {
 Expire.prototype.scan = function scan() {
   var now = Date.now()
     , result
+    , clean
     , key;
 
   for (key in this.cache) {
+    clean = key.slice(this.prefix.length);
     result = this.cache[key];
 
     if (result.streaming) continue;
     if (now - result.last >= result.expires) {
-      this.remove(key, true);
+      this.remove(clean, true);
     }
   }
 
@@ -276,7 +285,7 @@ Expire.prototype.destroy = function destroy() {
 };
 
 /**
- * Parse durations to miliseconds. Bluntly copy and pasted from `ms.js` so all
+ * Parse durations to milliseconds. Bluntly copy and pasted from `ms.js` so all
  * copyright belongs to them. Except the parts that I fixed because it did some
  * stupid things like not always returning numbers or only accepting strings..
  *
@@ -323,5 +332,7 @@ Expire.parse = function parse(str) {
   }
 };
 
+//
 // Expose the Expire helper so we can do some unit testing against it.
+//
 module.exports = Expire;

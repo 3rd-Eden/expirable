@@ -1,6 +1,6 @@
 {
   "name": "expirable",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Expirable cache",
   "main": "index.js",
   "scripts": {

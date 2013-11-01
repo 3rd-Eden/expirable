@@ -32,6 +32,17 @@ describe('Expirable', function () {
     expect(cache.length).to.equal(0);
   });
 
+  it('should prefix the values with the given prefix', function () {
+    var cache = new Expirable('5 minutes');
+
+    cache.set('foo', 'bar');
+    expect(cache.get('foo')).to.equal('bar');
+    expect(cache.length).to.equal(1);
+    expect(Object.keys(cache.cache)[0]).to.equal(cache.prefix + 'foo');
+
+    cache.destroy();
+  });
+
   it('should have the key after setting', function () {
     var cache = new Expirable('1 second');
 
@@ -121,7 +132,7 @@ describe('Expirable', function () {
 
     setTimeout(function () {
       expect(cache.length).to.equal(1);
-      expect(cache.cache.foo.value).to.equal('trololol');
+      expect(cache.cache[cache.prefix + 'foo'].value).to.equal('trololol');
 
       expect(cache.get('foo')).to.equal(undefined);
       expect(cache.length).to.equal(0);
