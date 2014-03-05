@@ -14,7 +14,7 @@ var Expirable = require('expirable');
 var cache = new Expirable('5 minutes');
 
 // add a new item to the cache, expires in 5 minutes, as that is what we
-configured above
+// configured above.
 cache.set('key', value);
 
 // add item to the cache, but for 10 minutes.
