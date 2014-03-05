@@ -267,7 +267,7 @@ Expire.prototype.start = function start() {
   // Stop old timers before starting a new one
   this.stop();
 
-  this.timer = setInterval(this.scan.bind(this), this.expire);
+  this.timer = setInterval(this.scan.bind(this), this.interval);
   return this;
 };
 

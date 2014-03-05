@@ -99,7 +99,7 @@ describe('Expirable', function () {
   });
 
   it('should emit <key>:removed when a key is expired', function (done) {
-    var cache = new Expirable('5 ms');
+    var cache = new Expirable({ expire: '5 ms', interval: '2 ms' });
 
     cache.set('foo', 'bar');
     cache.on('foo:removed', function (expired) {
